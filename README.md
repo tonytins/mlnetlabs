@@ -1,6 +1,6 @@
 # ML.NET Labs 🤖
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/tonytins/mlnetlabs/HEAD?urlpath=lab) [![GitHub license](https://img.shields.io/github/license/tonytins/mlnetlabs)](https://github.com/tonytins/mlnetlabs/blob/master/LICENSE)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/tonytins/mlnetlabs/HEAD?urlpath=lab) [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 
 ML.NET Labs is a research project into machine learning using Microsoft's ML.NET. The project is based on a variety of tutorials to get a firm understanding of the framework.
 
