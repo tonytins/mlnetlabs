@@ -1,0 +1,18 @@
+[
+    {
+        "title": "Test with System.Net.Http.HttpMessageHandler.Send fails",
+        "description": "Test failing with The synchronous method is not supported by 'System.Net.Http.BrowserHttpHandler'. If you're using a custom 'HttpMessageHandler' and wish to use synchronous HTTP methods, you must override its 'Send' virtual method."
+    },
+    {
+        "title": "Opening Stream Writer on file named CON.* exception could be informative.",
+        "description": "Opening Stream Writer on file named CON.* exception could be informative.\nBe as descriptive as you can with your title.\nUsing .net 5.0.0-rc.1.20452.2\nOpening file with StreamWriter named CON.cs causes a 'not supported exception.'\nThe code involved:"
+    },
+    {
+        "title": "dotnet-dump collect never returns",
+        "description": "I'm trying to collect a dump file on a dotnet core 3.1 process running in docker container FROM mcr.microsoft.com/dotnet/core/runtime:3.1-bionic and the collect call just never returns. It sits there with the message, \"Writing full to /root/core_20201001_202020\" What can I do to diagnose this? I see there is a --diag flag, what will this do? Write a debug file, where?"
+    },
+    {
+        "title": "Enumeration value emitted as empty object",
+        "description": "When serializing enums, if the field type is Enum then the emitted value is {}"
+    }
+]

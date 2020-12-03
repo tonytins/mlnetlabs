@@ -1,0 +1,14 @@
+[
+    {
+        "title": "WebSockets communication is slow in my machine",
+        "description": "The WebSockets communication used under the covers by SignalR looks like is going slow in my development machine.."
+    },
+    {
+        "title": "Entity Framework crashes",
+        "description": "When connecting to the database, EF is crashing"
+    },
+    {
+        "title": "Missing analyzer for methods with PlatformNotSupportedException body",
+        "description": "In .NET5 new attributes were introduced to support CA1416 analyzer rule to detect when unsupported APIs are called. To make the analyzer more effective existing libraries need to annotate their code with UnsupportedOSPlatformAttribute or SupportedOSPlatformAttribute for the analyzer to be able to work."
+    }
+]
