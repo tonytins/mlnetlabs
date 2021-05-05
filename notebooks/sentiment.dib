@@ -1,0 +1,160 @@
+#!csharp
+
+# Sentiment Analysis
+Based on Microsoft's [ML.NET tutorial](https://docs.microsoft.com/en-us/dotnet/machine-learning/tutorials/sentiment-analysis).
+
+#!csharp
+
+#r "nuget:Microsoft.ML"
+
+#!csharp
+
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Microsoft.ML;
+using Microsoft.ML.Data;
+using static Microsoft.ML.DataOperationsCatalog;
+using Microsoft.ML.Trainers;
+using Microsoft.ML.Transforms.Text;
+
+#!csharp
+
+// Load in the dataset for consumption
+readonly string _dataPath = Path.Combine(Environment.CurrentDirectory, "data", "yelp_labelled.txt");
+
+#!csharp
+
+/* 
+ * The input dataset class, SentimentData, has a string for user comments
+ * (SentimentText) and a bool (Sentiment) value of either 1 (positive) 
+ * or 0 (negative) for senitment. 
+ */
+class SentimentData
+{
+    [LoadColumn(0)]
+    public string SentimentText;
+
+    [LoadColumn(1), ColumnName("Label")]
+    public bool Sentiment;
+}
+
+/*
+ * SentimentPrediction is the prediction class used after the model training.
+ * It inherits from SentimentData so that the input SentimentText cam be displayed
+ * along with the prediction.
+ */
+class SentimentPrediction : SentimentData
+{
+
+    [ColumnName("PredictedLabel")]
+    public bool Prediction { get; set; }
+
+    public float Probability { get; set; }
+
+    public float Score { get; set; }
+}
+
+#!csharp
+
+MLContext ctx = new MLContext(seed: 0);
+
+#!csharp
+
+// LoadData() loads the data, splits the dataset, and returns the
+// the split and train test datasets.
+TrainTestData LoadData(MLContext ctx)
+{
+    var dataView = ctx.Data.LoadFromTextFile<SentimentData>(_dataPath, hasHeader: false);
+    var splitDataView = ctx.Data.TrainTestSplit(dataView, testFraction: 0.2);
+    return splitDataView;
+}
+
+#!csharp
+
+// Extracts and transforms the data then use classification
+// algorithm that categorizes items or rows of data
+ITransformer BuildAndTrainModel(MLContext ctx, IDataView splitTrainSet)
+{
+    var estimator = ctx.Transforms.Text.FeaturizeText("Features", 
+    inputColumnName: nameof(SentimentData.SentimentText))
+    .Append(ctx.BinaryClassification.Trainers.SdcaLogisticRegression(labelColumnName: "Label",
+    featureColumnName: "Features"))
+    .AppendCacheCheckpoint(ctx);;
+
+    var model = estimator.Fit(splitTrainSet);
+
+    return model; 
+}
+
+#!csharp
+
+// Loads the test dataset, creates the eveluator, evaluates the
+// model and creates the metrics then displays the metrics
+void Evaluate(MLContext ctx, ITransformer model, IDataView splitTestSet)
+{
+    var predictions = model.Transform(splitTestSet);
+    var metrics = ctx.BinaryClassification.Evaluate(predictions, "Label");
+
+    Console.WriteLine("Model quality metrics evaluation");
+    Console.WriteLine($"Accuracy: {metrics.Accuracy:P2}");
+    Console.WriteLine($"Auc: {metrics.AreaUnderRocCurve:P2}");
+    Console.WriteLine($"F1Score: {metrics.F1Score:P2}");
+}
+
+#!csharp
+
+void UseModelWithSingleItem(MLContext ctx, ITransformer model, SentimentData sample)
+{
+    var predictionFunc = ctx.Model.CreatePredictionEngine<SentimentData, SentimentPrediction>(model);
+    var resultPrediction = predictionFunc.Predict(sample);
+
+    Console.WriteLine($"Sentiment: {resultPrediction.SentimentText} | Prediction: {(Convert.ToBoolean(resultPrediction.Prediction) ? "Positive" : "Negative")} | Probability: {resultPrediction.Probability} ");
+}
+
+#!csharp
+
+void UseModelWithBatchItems(MLContext ctx, ITransformer model, IEnumerable<SentimentData> sample)
+{
+    var batch = ctx.Data.LoadFromEnumerable(sample);
+    var predictions = model.Transform(batch);
+    var results = ctx.Data.CreateEnumerable<SentimentPrediction>(predictions, reuseRowObject: false);
+
+    foreach (var prediction in results)
+    {
+        Console.WriteLine($"Sentiment: {prediction.SentimentText} | Prediction: {(Convert.ToBoolean(prediction.Prediction) ? "Positive" : "Negative")} | Probability: {prediction.Probability} ");
+    }
+}
+
+#!csharp
+
+TrainTestData splitDataView = LoadData(ctx);
+ITransformer model = BuildAndTrainModel(ctx, splitDataView.TrainSet);
+
+#!csharp
+
+Evaluate(ctx, model, splitDataView.TestSet);
+
+#!csharp
+
+SentimentData sample = new SentimentData
+{
+    SentimentText = "This was a very bad steak"
+};
+UseModelWithSingleItem(ctx, model, sample);
+
+#!csharp
+
+IEnumerable<SentimentData> sample2 = new[]
+{
+    new SentimentData
+    {
+        SentimentText = "This was a horrible meal"
+    },
+    new SentimentData
+    {
+        SentimentText = "I love this spaghetti."
+    }
+};
+
+UseModelWithBatchItems(ctx, model, sample2);

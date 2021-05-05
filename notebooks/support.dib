@@ -1,0 +1,153 @@
+#!csharp
+
+# Categorize Github support issues
+Based on Microsoft's [ML.NET tutorial](https://docs.microsoft.com/en-us/dotnet/machine-learning/tutorials/github-issue-classification). It has been altered to accept set of JSON samples with the order of the issue randomized. 
+
+#!csharp
+
+#r "nuget:Microsoft.ML"
+
+#!csharp
+
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using Microsoft.ML;
+using Microsoft.ML.Data;
+
+#!csharp
+
+public class GitHubIssue
+{
+    [LoadColumn(0)]
+    public string ID { get; set; }
+    [LoadColumn(1)]
+    public string Area { get; set; }
+    [LoadColumn(2)]
+    public string Title { get; set; }
+    [LoadColumn(3)]
+    public string Description { get; set; }
+}
+
+public class IssuePrediction
+{
+    [ColumnName("PredictedLabel")]
+    public string Area;
+}
+
+#!csharp
+
+var trainDataPath = Path.Combine(Environment.CurrentDirectory, "data", "issues_train.tsv");
+var testDataPath = Path.Combine(Environment.CurrentDirectory, "data", "issues_test.tsv");
+var modelPath = Path.Combine(Environment.CurrentDirectory, "models", "gh_issues.zip");
+
+#!csharp
+
+var ctx = new MLContext(seed: 0);
+var trainingDataView = ctx.Data.LoadFromTextFile<GitHubIssue>(trainDataPath, hasHeader: true);
+
+#!csharp
+
+PredictionEngine<GitHubIssue, IssuePrediction> predEngine;
+ITransformer trainedModel;
+
+#!csharp
+
+IEnumerable<GitHubIssue> SampleData(string file) 
+{
+    var data = Path.Combine(Environment.CurrentDirectory, "samples", file);
+    var reader = File.ReadAllText(data);
+    var opt = new JsonSerializerOptions 
+    { 
+        IgnoreNullValues = true, 
+        PropertyNameCaseInsensitive = true,
+    };
+    var json = JsonSerializer.Deserialize<IEnumerable<GitHubIssue>>(reader, opt);
+    var rng = new Random();
+    var order = json.OrderBy(x => rng.Next(json.ToArray().Length));
+    return order;
+}
+
+#!csharp
+
+IEstimator<ITransformer> ProcessData(MLContext ctx)
+{
+    var pipeline = ctx.Transforms.Conversion.MapValueToKey(inputColumnName: "Area", outputColumnName: "Label")
+    .Append(ctx.Transforms.Text.FeaturizeText(
+    inputColumnName: "Title", outputColumnName: "TitleFeaturized"))
+    .Append(ctx.Transforms.Text.FeaturizeText(inputColumnName: "Description", outputColumnName: "DescriptionFeaturized"))
+    .Append(ctx.Transforms.Concatenate("Features", "TitleFeaturized", "DescriptionFeaturized"))
+    .AppendCacheCheckpoint(ctx);
+
+    return pipeline;
+}
+
+#!csharp
+
+void BuildAndTrainModel(MLContext ctx, IDataView trainingDataView, IEstimator<ITransformer> pipeline, IEnumerable<GitHubIssue> sample)
+{
+    var training = pipeline.Append(ctx.MulticlassClassification.Trainers.SdcaMaximumEntropy("Label", "Features"))
+    .Append(ctx.Transforms.Conversion.MapKeyToValue("PredictedLabel"));
+
+    Console.WriteLine("Training model ...");
+    trainedModel = training.Fit(trainingDataView);
+    Console.WriteLine($"Training ended: {DateTimeOffset.Now.ToString()}");
+
+    predEngine = ctx.Model.CreatePredictionEngine<GitHubIssue, IssuePrediction>(trainedModel);
+
+    foreach (var prediction in sample)
+        predEngine.Predict(prediction);
+
+}
+
+#!csharp
+
+void SaveModelAsFile(MLContext ctx, DataViewSchema trainingDataViewSchema, ITransformer model)
+{
+    ctx.Model.Save(model, trainingDataViewSchema, modelPath);
+}
+
+#!csharp
+
+void Evaluate(MLContext ctx, DataViewSchema trainingDataViewSchema)
+{   
+    var testDataView = ctx.Data.LoadFromTextFile<GitHubIssue>(testDataPath, hasHeader: true);
+    var testMetrics = ctx.MulticlassClassification.Evaluate(trainedModel.Transform(testDataView));
+
+    Console.WriteLine($"* Metrics for Multi-class Classification model - Test Data");
+    Console.WriteLine($"* MicroAccuracy: {testMetrics.MicroAccuracy:0.###}");
+    Console.WriteLine($"* MacroAccuracy: {testMetrics.MacroAccuracy:0.###}");
+    Console.WriteLine($"* LogLoss: {testMetrics.LogLoss:#.###}");
+    Console.WriteLine($"* LogLossReduction: {testMetrics.LogLossReduction:#.###}");
+
+    SaveModelAsFile(ctx, trainingDataViewSchema, trainedModel);
+}
+
+#!csharp
+
+void PredictIssue(MLContext ctx, IEnumerable<GitHubIssue> sample)
+{
+    var loadedModel = ctx.Model.Load(modelPath, out var modelInputSchema);
+    predEngine = ctx.Model.CreatePredictionEngine<GitHubIssue, IssuePrediction>(loadedModel);
+
+    foreach (var prediction in sample)
+    {
+        var predict = predEngine.Predict(prediction);
+        Console.WriteLine($"Predicting issue: {prediction.Title}{Environment.NewLine}Single Prediction - Result: {predict.Area}");
+    }
+}
+
+#!csharp
+
+var pipeline = ProcessData(ctx);
+var trainingSamples = SampleData("issues_train.json");
+BuildAndTrainModel(ctx, trainingDataView, pipeline, trainingSamples);
+
+#!csharp
+
+Evaluate(ctx, trainingDataView.Schema);
+
+#!csharp
+
+var predictSamples = SampleData("issues_predict.json");
+PredictIssue(ctx, predictSamples);
