@@ -1,0 +1,54 @@
+#!markdown
+
+# Servo
+
+Servo is a AI vision model that idenifies household items from The Sims. It is designed around the premise that a simulated person would need to know what said object is so they can satisfy their needs.
+
+#!csharp
+
+#r "nuget:Microsoft.ML"
+#r "nuget:Microsoft.ML.ImageAnalytics"
+#r "nuget:Microsoft.ML.Vision"
+#r "nuget:SciSharp.TensorFlow.Redist"
+
+#!csharp
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using Microsoft.ML;
+using Microsoft.ML.Transforms;
+using Microsoft.ML.Vision;
+using static Microsoft.ML.Transforms.ValueToKeyMappingEstimator;
+
+#!csharp
+
+public class ImageData
+{
+    public ImageData(string imagePath, string label)
+    {
+        ImagePath = imagePath;
+        Label = label;
+    }
+
+    public readonly string ImagePath;
+    public readonly string Label;
+}
+
+#!csharp
+
+public class InMemoryImageData
+{
+    public InMemoryImageData(byte[] image, string label, string imageFileName)
+    {
+        Image = image;
+        Label = label;
+        ImageFileName = imageFileName;
+    }
+
+    public readonly byte[] Image;
+    public readonly string Label;
+    public readonly string ImageFileName;
+}
