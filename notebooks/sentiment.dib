@@ -1,4 +1,4 @@
-#!csharp
+#!markdown
 
 # Sentiment Analysis
 Based on Microsoft's [ML.NET tutorial](https://docs.microsoft.com/en-us/dotnet/machine-learning/tutorials/sentiment-analysis).

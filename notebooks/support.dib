@@ -1,4 +1,4 @@
-#!csharp
+#!markdown
 
 # Categorize Github support issues
 Based on Microsoft's [ML.NET tutorial](https://docs.microsoft.com/en-us/dotnet/machine-learning/tutorials/github-issue-classification). It has been altered to accept set of JSON samples with the order of the issue randomized. 
